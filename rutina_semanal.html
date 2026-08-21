@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rutina">
 <title>Rutina Semanal</title>
 <style>
   :root {
@@ -32,7 +35,6 @@
     overscroll-behavior: none;
   }
 
-  /* ── LAYOUT ── */
   #app {
     display: flex;
     flex-direction: column;
@@ -40,7 +42,6 @@
     height: 100dvh;
   }
 
-  /* ── HEADER ── */
   header {
     padding: calc(var(--safe-top) + 16px) 20px 12px;
     background: var(--bg);
@@ -51,7 +52,6 @@
   header h1 { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px; }
   header h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 
-  /* ── TABS ── */
   .day-tabs {
     display: flex;
     overflow-x: auto;
@@ -80,7 +80,6 @@
   .day-tab.lower.active { background: var(--lower-color); }
   .day-tab.rest.active { background: #444; }
 
-  /* ── SCROLL AREA ── */
   .scroll-area {
     flex: 1;
     overflow-y: auto;
@@ -88,7 +87,6 @@
     overscroll-behavior-y: contain;
   }
 
-  /* ── DAY CONTENT ── */
   .day-content { display: none; padding: 16px 16px calc(var(--safe-bottom) + 24px); }
   .day-content.active { display: block; }
 
@@ -100,7 +98,6 @@
   .day-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
   .day-meta { font-size: 12px; color: var(--text-dim); }
 
-  /* ── CONTROLS ROW ── */
   .controls-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -108,7 +105,6 @@
     margin-bottom: 12px;
   }
 
-  /* ── INLINE TIMER ── */
   .timer-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -141,10 +137,7 @@
     margin-top: 2px;
   }
 
-  .timer-btns {
-    display: flex;
-    gap: 8px;
-  }
+  .timer-btns { display: flex; gap: 8px; }
 
   .t-inline-btn {
     border: none;
@@ -161,7 +154,6 @@
   .t-inline-btn.pause { background: #2a2a2a; color: var(--text); border: 1px solid var(--border); }
   .t-inline-btn.reset { background: #1e1e1e; color: var(--text-dim); border: 1px solid var(--border); font-size: 12px; padding: 9px 12px; }
 
-  /* ── ROUNDS ── */
   .rounds-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -195,7 +187,6 @@
   .r-btn.plus.upper-accent { background: rgba(79,110,247,0.2); color: var(--upper-color); border-color: rgba(79,110,247,0.4); }
   .r-btn.plus.lower-accent { background: rgba(232,93,74,0.2); color: var(--lower-color); border-color: rgba(232,93,74,0.4); }
 
-  /* ── REST INFO ── */
   .rest-info {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -208,7 +199,6 @@
 
   .exercises-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
 
-  /* ── EXERCISE CARDS ── */
   .exercise-card {
     background: var(--surface);
     border-radius: var(--radius);
@@ -222,7 +212,7 @@
   .exercise-header {
     display: flex;
     align-items: center;
-    padding: 14px 14px;
+    padding: 14px;
     cursor: pointer;
     gap: 12px;
     user-select: none;
@@ -269,7 +259,23 @@
   .ex-steps li { font-size: 12px; color: #bbb; display: flex; gap: 8px; line-height: 1.55; }
   .ex-steps li::before { content: '→'; color: var(--text-dim); flex-shrink: 0; }
 
-  /* ── REST DAY ── */
+  /* Historial */
+  .history-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .history-label { font-size: 11px; color: var(--text-dim); }
+  .history-value { font-size: 13px; font-weight: 600; }
+  .history-best { font-size: 11px; color: var(--text-dim); text-align: right; }
+  .history-best span { color: #f0c040; font-weight: 700; }
+
   .rest-screen { text-align: center; padding: 60px 20px; }
   .rest-screen .rest-icon { font-size: 64px; margin-bottom: 20px; }
   .rest-screen h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
@@ -333,14 +339,57 @@ const DAYS = [
   { id:'domingo',   label:'DOM', title:'Domingo',   type:'Descanso',   exs:null,  color:'rest'  }
 ];
 
-// STATE
+// ── LOCALSTORAGE ──
+const LS_KEY = 'rutina_rounds';
+
+function loadRounds() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e) { return {}; }
+}
+
+function saveRounds(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function getStorageKey(dayId) {
+  // Clave: dia + fecha de lunes de la semana actual → se resetea cada semana
+  const now = new Date();
+  const monday = new Date(now);
+  const day = now.getDay();
+  const diff = (day === 0) ? -6 : 1 - day;
+  monday.setDate(now.getDate() + diff);
+  const weekKey = `${monday.getFullYear()}-${monday.getMonth()+1}-${monday.getDate()}`;
+  return `${dayId}_${weekKey}`;
+}
+
+function getRounds(dayId) {
+  const data = loadRounds();
+  const key = getStorageKey(dayId);
+  return data[key] || 0;
+}
+
+function getBestRounds(dayId) {
+  const data = loadRounds();
+  let best = 0;
+  Object.keys(data).forEach(k => {
+    if (k.startsWith(dayId + '_')) best = Math.max(best, data[k]);
+  });
+  return best;
+}
+
+function setRounds(dayId, value) {
+  const data = loadRounds();
+  data[getStorageKey(dayId)] = value;
+  saveRounds(data);
+}
+
+// ── ESTADO RUNTIME ──
 const roundsState = {};
-DAYS.forEach(d => roundsState[d.id] = 0);
+DAYS.forEach(d => { roundsState[d.id] = getRounds(d.id); });
 
-// TIMER STATE
-let timerSec = 20*60, timerRunning = false, timerInterval = null;
+const timerState = {};
+DAYS.forEach(d => { timerState[d.id] = { remaining: 20*60, running: false, interval: null }; });
 
-// BUILD TABS
+// ── BUILD TABS ──
 const tabsEl = document.getElementById('dayTabs');
 DAYS.forEach(d => {
   const btn = document.createElement('button');
@@ -350,7 +399,7 @@ DAYS.forEach(d => {
   tabsEl.appendChild(btn);
 });
 
-// BUILD SCROLL AREA
+// ── BUILD SCROLL AREA ──
 const scroll = document.getElementById('scrollArea');
 
 DAYS.forEach(d => {
@@ -374,6 +423,8 @@ DAYS.forEach(d => {
   }
 
   const accentClass = d.color === 'upper' ? 'upper-accent' : 'lower-accent';
+  const currentRounds = roundsState[d.id];
+  const bestRounds = getBestRounds(d.id);
 
   const cards = d.exs.map((ex, i) => {
     const tags = ex.tags.map(t => `<span class="ex-tag">${t}</span>`).join('');
@@ -420,12 +471,19 @@ DAYS.forEach(d => {
       </div>
       <div class="rounds-card">
         <div class="rounds-label">Rondas</div>
-        <div class="rounds-count" id="rounds-${d.id}">0</div>
+        <div class="rounds-count" id="rounds-${d.id}">${currentRounds}</div>
         <div class="rounds-btns">
           <button class="r-btn minus" onclick="changeRound('${d.id}',-1)">−</button>
           <button class="r-btn plus ${accentClass}" onclick="changeRound('${d.id}',1)">+</button>
         </div>
       </div>
+    </div>
+    <div class="history-bar">
+      <div>
+        <div class="history-label">Esta semana</div>
+        <div class="history-value">${currentRounds} ronda${currentRounds !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="history-best">Mejor semana<br><span>${bestRounds > 0 ? bestRounds + ' rondas' : '—'}</span></div>
     </div>
     <div class="rest-info">⚡ Descanso 20–40 seg entre ejercicios. Sin parar más.</div>
     <div class="exercises-label">Circuito</div>
@@ -434,12 +492,7 @@ DAYS.forEach(d => {
   scroll.appendChild(section);
 });
 
-// Per-day timer state
-const timerState = {};
-DAYS.forEach(d => {
-  timerState[d.id] = { remaining: 20*60, running: false, interval: null };
-});
-
+// ── TIMER ──
 function timerToggle(dayId) {
   const s = timerState[dayId];
   const btn = document.getElementById('tstart-'+dayId);
@@ -476,9 +529,8 @@ function timerReset(dayId) {
   clearInterval(s.interval);
   s.running = false;
   s.remaining = 20*60;
-  const btn = document.getElementById('tstart-'+dayId);
-  btn.textContent = 'Iniciar';
-  btn.className = 't-inline-btn start';
+  document.getElementById('tstart-'+dayId).textContent = 'Iniciar';
+  document.getElementById('tstart-'+dayId).className = 't-inline-btn start';
   document.getElementById('tstatus-'+dayId).textContent = 'LISTO';
   document.getElementById('tdisp-'+dayId).style.color = '';
   updateTimerDisplay(dayId);
@@ -491,11 +543,25 @@ function updateTimerDisplay(dayId) {
   document.getElementById('tdisp-'+dayId).textContent = `${m}:${sec}`;
 }
 
+// ── RONDAS ──
 function changeRound(dayId, delta) {
   roundsState[dayId] = Math.max(0, (roundsState[dayId]||0) + delta);
+  setRounds(dayId, roundsState[dayId]);
   document.getElementById('rounds-'+dayId).textContent = roundsState[dayId];
+  // Actualiza también el historial inline
+  const histEl = document.querySelector(`#${dayId} .history-value`);
+  if (histEl) {
+    const r = roundsState[dayId];
+    histEl.textContent = `${r} ronda${r !== 1 ? 's' : ''}`;
+  }
+  const bestEl = document.querySelector(`#${dayId} .history-best span`);
+  if (bestEl) {
+    const best = getBestRounds(dayId);
+    bestEl.textContent = best > 0 ? best + ' rondas' : '—';
+  }
 }
 
+// ── EJERCICIOS ──
 function toggleCard(e, card) {
   if (e.target.closest('.ex-check') || e.target.closest('.r-btn') || e.target.closest('.t-inline-btn')) return;
   card.classList.toggle('open');
@@ -508,6 +574,7 @@ function toggleCheck(e, el) {
   el.closest('.exercise-card').classList.toggle('done', el.classList.contains('checked'));
 }
 
+// ── NAV ──
 const dayMap = [null,'domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
 
 function showDay(id) {
@@ -521,7 +588,7 @@ function showDay(id) {
 }
 
 const today = dayMap[new Date().getDay()];
-showDay(today && DAYS.find(d=>d.id===today) ? today : 'lunes');
+showDay(today && DAYS.find(d => d.id === today) ? today : 'lunes');
 </script>
 </body>
 </html>
