@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rutina Semanal</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --accent: #4f6ef7;
+    --accent2: #e85d4a;
+    --text: #f0f0f0;
+    --text-dim: #888;
+    --upper-color: #4f6ef7;
+    --lower-color: #e85d4a;
+    --border: #2e2e2e;
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    overscroll-behavior: none;
+  }
+
+  /* ── LAYOUT ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: calc(var(--safe-top) + 16px) 20px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px; }
+  header h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* ── TABS ── */
+  .day-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 12px 16px;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .day-tabs::-webkit-scrollbar { display: none; }
+  .day-tab {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .day-tab.active { color: #fff; border-color: transparent; }
+  .day-tab.upper.active { background: var(--upper-color); }
+  .day-tab.lower.active { background: var(--lower-color); }
+  .day-tab.rest.active { background: #444; }
+
+  /* ── SCROLL AREA ── */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* ── DAY CONTENT ── */
+  .day-content { display: none; padding: 16px 16px calc(var(--safe-bottom) + 24px); }
+  .day-content.active { display: block; }
+
+  .day-header { margin-bottom: 16px; }
+  .day-type { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; margin-bottom: 6px; }
+  .upper .day-type { background: rgba(79,110,247,0.15); color: var(--upper-color); }
+  .lower .day-type { background: rgba(232,93,74,0.15); color: var(--lower-color); }
+  .rest-day .day-type { background: rgba(100,100,100,0.15); color: var(--text-dim); }
+  .day-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
+  .day-meta { font-size: 12px; color: var(--text-dim); }
+
+  /* ── CONTROLS ROW ── */
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* ── INLINE TIMER ── */
+  .timer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .timer-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .timer-display-inline {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    flex: 1;
+  }
+
+  .timer-status {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .timer-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .t-inline-btn {
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 9px 16px;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+  .t-inline-btn:active { transform: scale(0.95); opacity: 0.85; }
+  .t-inline-btn.start { background: var(--accent); color: #fff; }
+  .t-inline-btn.pause { background: #2a2a2a; color: var(--text); border: 1px solid var(--border); }
+  .t-inline-btn.reset { background: #1e1e1e; color: var(--text-dim); border: 1px solid var(--border); font-size: 12px; padding: 9px 12px; }
+
+  /* ── ROUNDS ── */
+  .rounds-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 88px;
+  }
+  .rounds-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  .rounds-count { font-size: 32px; font-weight: 700; line-height: 1; }
+  .rounds-btns { display: flex; gap: 6px; }
+  .r-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s, opacity 0.1s;
+    -webkit-appearance: none;
+    line-height: 1;
+  }
+  .r-btn:active { transform: scale(0.9); opacity: 0.8; }
+  .r-btn.plus.upper-accent { background: rgba(79,110,247,0.2); color: var(--upper-color); border-color: rgba(79,110,247,0.4); }
+  .r-btn.plus.lower-accent { background: rgba(232,93,74,0.2); color: var(--lower-color); border-color: rgba(232,93,74,0.4); }
+
+  /* ── REST INFO ── */
+  .rest-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .exercises-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+
+  /* ── EXERCISE CARDS ── */
+  .exercise-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: opacity 0.2s;
+  }
+  .exercise-card.done { opacity: 0.45; }
+
+  .exercise-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 14px;
+    cursor: pointer;
+    gap: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .ex-number {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .upper .ex-number { background: rgba(79,110,247,0.2); color: var(--upper-color); }
+  .lower .ex-number { background: rgba(232,93,74,0.2); color: var(--lower-color); }
+
+  .ex-info { flex: 1; min-width: 0; }
+  .ex-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ex-reps { font-size: 12px; color: var(--text-dim); }
+
+  .ex-check {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .ex-check.checked { background: #222; border-color: #444; color: #666; }
+
+  .ex-expand { font-size: 11px; color: var(--text-dim); flex-shrink: 0; transition: transform 0.2s; margin-left: 4px; }
+  .exercise-card.open .ex-expand { transform: rotate(180deg); }
+
+  .exercise-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .exercise-card.open .exercise-body { display: block; }
+  .ex-body-inner { padding-top: 12px; }
+
+  .ex-technique { font-size: 13px; line-height: 1.65; color: #ccc; margin-bottom: 10px; }
+  .ex-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ex-tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; background: var(--surface2); color: var(--text-dim); }
+  .ex-steps { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .ex-steps li { font-size: 12px; color: #bbb; display: flex; gap: 8px; line-height: 1.55; }
+  .ex-steps li::before { content: '→'; color: var(--text-dim); flex-shrink: 0; }
+
+  /* ── REST DAY ── */
+  .rest-screen { text-align: center; padding: 60px 20px; }
+  .rest-screen .rest-icon { font-size: 64px; margin-bottom: 20px; }
+  .rest-screen h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .rest-screen p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>DailyRepsGuy — Adaptado</h1>
+    <h2>Rutina Semanal</h2>
+  </header>
+  <div class="day-tabs" id="dayTabs"></div>
+  <div class="scroll-area" id="scrollArea"></div>
+</div>
+
+<script>
+const UPPER = [
+  { name: "Kneeling Push-Ups", reps: "12 reps", tags: ["Pecho","Tríceps","Hombro"],
+    technique: "Flexiones de rodillas. Reduce la carga y permite trabajar la técnica sin compensar con la lumbar.",
+    steps: ["Rodillas en el suelo, manos a la anchura de hombros","Cuerpo recto de rodillas a cabeza, sin hundir caderas","Baja controlado hasta casi tocar el suelo con el pecho","Empuja hasta extender los brazos completamente","Tempo: 2 seg bajando, 1 arriba"] },
+  { name: "Incline Push-Ups", reps: "10 reps", tags: ["Pecho inferior","Tríceps"],
+    technique: "Manos en superficie elevada (silla, sofá, encimera). Ángulo diferente, más fácil que la flexión normal.",
+    steps: ["Manos en el borde de la silla o sofá","Pies en el suelo, cuerpo en diagonal","Baja hasta que el pecho casi toque el apoyo","Empuja de vuelta","Cuanto más baja la superficie, más difícil"] },
+  { name: "Chair Dips", reps: "10 reps", tags: ["Tríceps","Hombro"],
+    technique: "Fondos en silla. Aísla tríceps de manera efectiva. Pies más cerca = más fácil.",
+    steps: ["Manos en el borde de la silla, detrás de ti","Pies con rodillas dobladas (fácil) o estiradas (difícil)","Baja doblando codos hasta 90°","Empuja hasta extender completamente","Codos apuntando hacia atrás, no hacia fuera"] },
+  { name: "Remo KB — Un brazo", reps: "10 reps cada lado", tags: ["Espalda","Bíceps","Romboides"],
+    technique: "Remo unilateral con KB. El mejor ejercicio de espalda para casa. Trabaja dorsal, romboides y bíceps.",
+    steps: ["Rodilla y mano contraria apoyadas en silla o banco","Espalda plana, paralela al suelo","KB colgando del brazo libre completamente estirado","Tira el codo hacia el techo, aprieta el omóplato al final","Baja controlado — la fuerza viene del dorsal, no rotes el torso"] },
+  { name: "Crunches", reps: "15 reps", tags: ["Abdomen","Core"],
+    technique: "Crunch abdominal básico. Hecho bien y con volumen funciona.",
+    steps: ["Tumbado boca arriba, rodillas dobladas a 90°","Manos detrás de las orejas, sin tirar del cuello","Contrae el abdomen y sube los hombros del suelo","Movimiento corto — no hace falta subir del todo","Baja controlado sin relajar el core"] }
+];
+
+const LOWER = [
+  { name: "Goblet Squat KB", reps: "12 reps", tags: ["Cuádriceps","Glúteos","Core"],
+    technique: "Sentadilla con KB delante del pecho. Obliga a mantener el torso erguido. Ideal para aprender la sentadilla profunda.",
+    steps: ["KB sujeto con ambas manos a la altura del pecho","Pies a la anchura de hombros, puntas ligeramente abiertas","Baja manteniendo el torso erguido, rodillas sobre los pies","Profundidad mínima: muslos paralelos al suelo","Empuja a través de los talones para subir"] },
+  { name: "Bulgarian Split Squat", reps: "8 reps cada lado", tags: ["Cuádriceps","Glúteos","Equilibrio"],
+    technique: "El ejercicio de pierna que más odiarás y más resultados te dará. Cuádriceps, glúteo y estabilidad de cadera.",
+    steps: ["Pie trasero apoyado en silla por el empeine","Pie delantero adelantado para que la rodilla no pase la punta","Baja verticalmente con el torso erguido","Rodilla trasera casi toca el suelo","Empuja con el talón delantero para subir","Añade KBs en cada mano cuando domines el movimiento"] },
+  { name: "Single-Leg Glute Bridge", reps: "10 reps cada lado", tags: ["Glúteos","Isquios","Core"],
+    technique: "Puente de glúteo a una pierna. Más difícil que el bilateral. Si la cadera cae, aún no estás listo.",
+    steps: ["Tumbado boca arriba, una rodilla doblada, la otra al aire","Aprieta el glúteo y sube la cadera: línea recta hombro-cadera-rodilla","Aguanta 1 seg arriba apretando fuerte","Baja controlado sin tocar del todo el suelo","La pierna elevada no baja — se mantiene fija"] },
+  { name: "KB Swings", reps: "15 reps", tags: ["Glúteos","Isquios","Cardio","Core"],
+    technique: "No es una sentadilla ni un ejercicio de brazos. Es una bisagra de cadera explosiva. El KB sube por inercia.",
+    steps: ["Pies a la anchura de hombros, KB en el suelo delante","Bisagra de cadera: culo hacia atrás, espalda plana","Agarra el KB, péndulo hacia atrás entre las piernas","Dispara las caderas hacia adelante explosivamente","El KB sube solo hasta pecho/hombros por inercia","Glúteos apretados arriba, espalda neutra siempre","Nunca redondees la espalda baja"] },
+  { name: "Calf Raises", reps: "20 reps", tags: ["Pantorrillas","Sóleo"],
+    technique: "Las pantorrillas son un músculo terco — necesitan volumen y rango completo.",
+    steps: ["De pie, pies a la anchura de caderas","Sube de puntillas lo máximo posible, aprieta arriba","Baja lento — el negativo es clave","Con escalón: baja el talón por debajo del nivel del pie","A una pierna para más intensidad"] }
+];
+
+const DAYS = [
+  { id:'lunes',     label:'LUN', title:'Lunes',     type:'Upper Body', exs:UPPER, color:'upper' },
+  { id:'martes',    label:'MAR', title:'Martes',    type:'Lower Body', exs:LOWER, color:'lower' },
+  { id:'miercoles', label:'MIÉ', title:'Miércoles', type:'Upper Body', exs:UPPER, color:'upper' },
+  { id:'jueves',    label:'JUE', title:'Jueves',    type:'Lower Body', exs:LOWER, color:'lower' },
+  { id:'viernes',   label:'VIE', title:'Viernes',   type:'Upper Body', exs:UPPER, color:'upper' },
+  { id:'sabado',    label:'SÁB', title:'Sábado',    type:'Lower Body', exs:LOWER, color:'lower' },
+  { id:'domingo',   label:'DOM', title:'Domingo',   type:'Descanso',   exs:null,  color:'rest'  }
+];
+
+// STATE
+const roundsState = {};
+DAYS.forEach(d => roundsState[d.id] = 0);
+
+// TIMER STATE
+let timerSec = 20*60, timerRunning = false, timerInterval = null;
+
+// BUILD TABS
+const tabsEl = document.getElementById('dayTabs');
+DAYS.forEach(d => {
+  const btn = document.createElement('button');
+  btn.className = `day-tab ${d.color}`;
+  btn.textContent = d.label;
+  btn.onclick = () => showDay(d.id);
+  tabsEl.appendChild(btn);
+});
+
+// BUILD SCROLL AREA
+const scroll = document.getElementById('scrollArea');
+
+DAYS.forEach(d => {
+  const section = document.createElement('div');
+  section.id = d.id;
+  section.className = `day-content ${d.color}`;
+
+  if (d.id === 'domingo') {
+    section.innerHTML = `
+      <div class="day-header">
+        <div class="day-type">Descanso</div>
+        <div class="day-title">Domingo</div>
+      </div>
+      <div class="rest-screen">
+        <div class="rest-icon">🛌</div>
+        <h3>Día de descanso</h3>
+        <p>El músculo crece cuando descansas, no cuando entrenas.<br>Si te sobra energía, sal a andar. Mañana toca.</p>
+      </div>`;
+    scroll.appendChild(section);
+    return;
+  }
+
+  const accentClass = d.color === 'upper' ? 'upper-accent' : 'lower-accent';
+
+  const cards = d.exs.map((ex, i) => {
+    const tags = ex.tags.map(t => `<span class="ex-tag">${t}</span>`).join('');
+    const steps = ex.steps.map(s => `<li>${s}</li>`).join('');
+    return `
+    <div class="exercise-card" onclick="toggleCard(event,this)">
+      <div class="exercise-header">
+        <div class="ex-number">${i+1}</div>
+        <div class="ex-info">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-reps">${ex.reps}</div>
+        </div>
+        <div class="ex-check" onclick="toggleCheck(event,this)"></div>
+        <div class="ex-expand">▾</div>
+      </div>
+      <div class="exercise-body">
+        <div class="ex-body-inner">
+          <p class="ex-technique">${ex.technique}</p>
+          <div class="ex-tags">${tags}</div>
+          <ul class="ex-steps">${steps}</ul>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div class="day-header">
+      <div class="day-type">${d.type}</div>
+      <div class="day-title">${d.title}</div>
+      <div class="day-meta">5 ejercicios · 20 min · Fase 1-2</div>
+    </div>
+    <div class="controls-row">
+      <div class="timer-card">
+        <div class="timer-top">
+          <div>
+            <div class="timer-display-inline" id="tdisp-${d.id}">20:00</div>
+            <div class="timer-status" id="tstatus-${d.id}">LISTO</div>
+          </div>
+          <div class="timer-btns">
+            <button class="t-inline-btn reset" id="treset-${d.id}" onclick="timerReset('${d.id}')">↺</button>
+            <button class="t-inline-btn start" id="tstart-${d.id}" onclick="timerToggle('${d.id}')">Iniciar</button>
+          </div>
+        </div>
+      </div>
+      <div class="rounds-card">
+        <div class="rounds-label">Rondas</div>
+        <div class="rounds-count" id="rounds-${d.id}">0</div>
+        <div class="rounds-btns">
+          <button class="r-btn minus" onclick="changeRound('${d.id}',-1)">−</button>
+          <button class="r-btn plus ${accentClass}" onclick="changeRound('${d.id}',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="rest-info">⚡ Descanso 20–40 seg entre ejercicios. Sin parar más.</div>
+    <div class="exercises-label">Circuito</div>
+    ${cards}`;
+
+  scroll.appendChild(section);
+});
+
+// Per-day timer state
+const timerState = {};
+DAYS.forEach(d => {
+  timerState[d.id] = { remaining: 20*60, running: false, interval: null };
+});
+
+function timerToggle(dayId) {
+  const s = timerState[dayId];
+  const btn = document.getElementById('tstart-'+dayId);
+  const status = document.getElementById('tstatus-'+dayId);
+  if (!s.running) {
+    if (s.remaining <= 0) s.remaining = 20*60;
+    s.running = true;
+    btn.textContent = 'Pausar';
+    btn.className = 't-inline-btn pause';
+    status.textContent = 'EN MARCHA';
+    s.interval = setInterval(() => {
+      s.remaining--;
+      updateTimerDisplay(dayId);
+      if (s.remaining <= 0) {
+        clearInterval(s.interval);
+        s.running = false;
+        btn.textContent = 'Iniciar';
+        btn.className = 't-inline-btn start';
+        status.textContent = '¡TIEMPO!';
+        document.getElementById('tdisp-'+dayId).style.color = '#e85d4a';
+      }
+    }, 1000);
+  } else {
+    clearInterval(s.interval);
+    s.running = false;
+    btn.textContent = 'Reanudar';
+    btn.className = 't-inline-btn start';
+    status.textContent = 'PAUSADO';
+  }
+}
+
+function timerReset(dayId) {
+  const s = timerState[dayId];
+  clearInterval(s.interval);
+  s.running = false;
+  s.remaining = 20*60;
+  const btn = document.getElementById('tstart-'+dayId);
+  btn.textContent = 'Iniciar';
+  btn.className = 't-inline-btn start';
+  document.getElementById('tstatus-'+dayId).textContent = 'LISTO';
+  document.getElementById('tdisp-'+dayId).style.color = '';
+  updateTimerDisplay(dayId);
+}
+
+function updateTimerDisplay(dayId) {
+  const s = timerState[dayId];
+  const m = Math.floor(s.remaining/60).toString().padStart(2,'0');
+  const sec = (s.remaining%60).toString().padStart(2,'0');
+  document.getElementById('tdisp-'+dayId).textContent = `${m}:${sec}`;
+}
+
+function changeRound(dayId, delta) {
+  roundsState[dayId] = Math.max(0, (roundsState[dayId]||0) + delta);
+  document.getElementById('rounds-'+dayId).textContent = roundsState[dayId];
+}
+
+function toggleCard(e, card) {
+  if (e.target.closest('.ex-check') || e.target.closest('.r-btn') || e.target.closest('.t-inline-btn')) return;
+  card.classList.toggle('open');
+}
+
+function toggleCheck(e, el) {
+  e.stopPropagation();
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+  el.closest('.exercise-card').classList.toggle('done', el.classList.contains('checked'));
+}
+
+const dayMap = [null,'domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+
+function showDay(id) {
+  document.querySelectorAll('.day-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.day-tab').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); scroll.scrollTop = 0; }
+  const idx = DAYS.findIndex(d => d.id === id);
+  const tabs = document.querySelectorAll('.day-tab');
+  if (tabs[idx]) tabs[idx].classList.add('active');
+}
+
+const today = dayMap[new Date().getDay()];
+showDay(today && DAYS.find(d=>d.id===today) ? today : 'lunes');
+</script>
+</body>
+</html>
